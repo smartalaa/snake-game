@@ -37,6 +37,7 @@ class SnakeGameBloc extends Bloc<SnakeGameEvent, SnakeGameState> {
     on<ChangeDirectionEvent>(_onChangeDirection);
     on<UpdateFrameEvent>(_onUpdateFrame);
     on<GameOverEvent>(_onGameOver);
+    on<CampaignCompleteEvent>(_onCampaignComplete);
     on<RestartGameEvent>(_onRestartGame);
   }
 
@@ -192,7 +193,7 @@ class SnakeGameBloc extends Bloc<SnakeGameEvent, SnakeGameState> {
       // Check for campaign mode progression
       if (runningState.isCampaign &&
           newFoodEaten >= GameConstants.foodPerMaze) {
-        _handleCampaignProgression(emit, runningState, newSnake, newScore);
+        await _handleCampaignProgression(emit, runningState, newSnake, newScore);
         return;
       }
 
@@ -304,19 +305,33 @@ class SnakeGameBloc extends Bloc<SnakeGameEvent, SnakeGameState> {
   }
 
   /// Handle campaign mode progression
-  void _handleCampaignProgression(
+  Future<void> _handleCampaignProgression(
     Emitter<SnakeGameState> emit,
     SnakeGameRunning state,
     List<SnakeSegment> snake,
     int score,
-  ) {
-    final nextMazeIndex = state.currentMazeIndex + 1;
+  ) async {
+  final nextMazeIndex = state.currentMazeIndex + 1;
+  final updatedScore = score + GameConstants.mazeCompletionBonus;
+
+  await _achievementRepository.checkScoreAchievements(updatedScore);
     
     if (nextMazeIndex >= GameConstants.mazeCount) {
       // Campaign complete
-      _achievementRepository.unlockAchievement(Achievements.campaignComplete.id);
-      _audioService.playLevelComplete();
-      add(const GameOverEvent());
+      final unlocked = await _achievementRepository
+          .unlockAchievement(Achievements.campaignComplete.id);
+
+      if (unlocked) {
+        await _audioService.playAchievement();
+      } else {
+        await _audioService.playLevelComplete();
+      }
+
+      add(CampaignCompleteEvent(
+        finalSnake: List<SnakeSegment>.from(snake),
+        finalScore: updatedScore,
+        mazesCleared: nextMazeIndex,
+      ));
       return;
     }
 
@@ -330,14 +345,61 @@ class SnakeGameBloc extends Bloc<SnakeGameEvent, SnakeGameState> {
       return;
     }
 
-    _audioService.playLevelComplete();
+    await _audioService.playLevelComplete();
     
     emit(state.copyWith(
+      snake: snake,
       maze: nextMaze,
       currentMazeIndex: nextMazeIndex,
       foodEatenInMaze: 0,
       foodPosition: newFood,
-      score: score + GameConstants.mazeCompletionBonus,
+      score: updatedScore,
+    ));
+  }
+
+  /// Handle campaign completion event
+  Future<void> _onCampaignComplete(
+    CampaignCompleteEvent event,
+    Emitter<SnakeGameState> emit,
+  ) async {
+    _gameTimer?.cancel();
+
+    if (state is! SnakeGameRunning) {
+      return;
+    }
+
+    final runningState = state as SnakeGameRunning;
+
+    final scoreRecord = ScoreRecord(
+      playerName: runningState.settings.playerName,
+      score: event.finalScore,
+      level: runningState.level,
+      mazeType: runningState.settings.mazeType,
+      timestamp: DateTime.now(),
+      snakeLength: event.finalSnake.length,
+      isCampaign: true,
+    );
+
+    await _scoreRepository.addScore(scoreRecord);
+    await _achievementRepository.checkGamesPlayedAchievements();
+
+    if (runningState.level == GameConstants.maxLevel) {
+      await _achievementRepository.checkDifficultyAchievement(runningState.level);
+    }
+
+    final isHighScore = _scoreRepository.isNewHighScore(scoreRecord);
+    if (isHighScore) {
+      await _audioService.playHighScore();
+    }
+
+    emit(SnakeGameVictory(
+      finalScore: event.finalScore,
+      snakeLength: event.finalSnake.length,
+      level: runningState.level,
+      mazesCleared: event.mazesCleared,
+      completionBonus: GameConstants.mazeCompletionBonus,
+      isHighScore: isHighScore,
+      settings: runningState.settings,
     ));
   }
 

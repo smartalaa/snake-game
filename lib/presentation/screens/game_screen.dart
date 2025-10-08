@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:snake_xenzia/core/constants/app_colors.dart';
 import 'package:snake_xenzia/core/constants/app_text_styles.dart';
+import 'package:snake_xenzia/core/constants/game_constants.dart';
 import 'package:snake_xenzia/data/models/snake_segment.dart';
 import 'package:snake_xenzia/domain/blocs/snake_game_bloc.dart';
 import 'package:snake_xenzia/presentation/widgets/snake_board.dart';
@@ -42,6 +43,8 @@ class _GameScreenState extends State<GameScreen> {
           listener: (context, state) {
             if (state is SnakeGameOver) {
               _showGameOverDialog(context, state);
+            } else if (state is SnakeGameVictory) {
+              _showVictoryDialog(context, state);
             }
           },
           builder: (context, state) {
@@ -58,9 +61,7 @@ class _GameScreenState extends State<GameScreen> {
                 onVerticalDragEnd: (details) => _handleVerticalSwipe(context, details),
                 onHorizontalDragEnd: (details) => _handleHorizontalSwipe(context, details),
                 child: Container(
-                  color: state is SnakeGameRunning 
-                      ? state.settings.theme.colors.background
-                      : Colors.black,
+                  color: _resolveBackgroundColor(state),
                   child: Column(
                     children: [
                       // Score Header
@@ -98,6 +99,10 @@ class _GameScreenState extends State<GameScreen> {
     } else if (state is SnakeGamePaused) {
       textColor = state.settings.theme.colors.text;
       scoreText = 'Score: ${state.score}';
+      levelText = 'Level: ${state.level}';
+    } else if (state is SnakeGameVictory) {
+      textColor = state.settings.theme.colors.text;
+      scoreText = 'Score: ${state.finalScore}';
       levelText = 'Level: ${state.level}';
     }
 
@@ -160,6 +165,8 @@ class _GameScreenState extends State<GameScreen> {
       } else if (state is SnakeGamePaused) {
         textColor = state.settings.theme.colors.textSecondary;
       }
+    } else if (state is SnakeGameVictory) {
+      textColor = state.settings.theme.colors.textSecondary;
     }
 
     return Container(
@@ -174,11 +181,26 @@ class _GameScreenState extends State<GameScreen> {
         ),
       ),
       child: Text(
-        'Swipe or use arrow keys (↑ ↓ ← →) to move • Tap to pause/resume',
+        state is SnakeGameVictory
+            ? 'Campaign complete! Celebrate your victory 🎉'
+            : 'Swipe or use arrow keys (↑ ↓ ← →) to move • Tap to pause/resume',
         style: AppTextStyles.caption.colored(textColor),
         textAlign: TextAlign.center,
       ),
     );
+  }
+
+  Color _resolveBackgroundColor(SnakeGameState state) {
+    if (state is SnakeGameRunning) {
+      return state.settings.theme.colors.background;
+    }
+    if (state is SnakeGamePaused) {
+      return state.settings.theme.colors.background;
+    }
+    if (state is SnakeGameVictory) {
+      return state.settings.theme.colors.background;
+    }
+    return Colors.black;
   }
 
   void _handleVerticalSwipe(BuildContext context, DragEndDetails details) {
@@ -292,6 +314,110 @@ class _GameScreenState extends State<GameScreen> {
                     Expanded(
                       child: Text(
                         '🎉 New High Score!',
+                        style: TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              Navigator.of(context).pop();
+            },
+            child: const Text(
+              'Main Menu',
+              style: TextStyle(color: Color(0xFF9FD849)),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF9FD849),
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.read<SnakeGameBloc>().add(const RestartGameEvent());
+            },
+            child: const Text('Play Again'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showVictoryDialog(BuildContext context, SnakeGameVictory state) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF9FD849), width: 2),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.emoji_events, color: Color(0xFFFFD700)),
+            SizedBox(width: 8),
+            Text(
+              'Campaign Complete!',
+              style: TextStyle(color: Colors.white, fontSize: 24),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Final Score: ${state.finalScore}',
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Snake Length: ${state.snakeLength}',
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Difficulty Level: ${state.level}',
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Mazes Cleared: ${state.mazesCleared}/${GameConstants.mazeCount}',
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Completion Bonus: +${state.completionBonus}',
+              style: const TextStyle(color: Color(0xFF9FD849), fontSize: 16),
+            ),
+            if (state.isHighScore) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4CAF50).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF4CAF50), width: 2),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.auto_awesome, color: Color(0xFFFFD700), size: 32),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Legendary! New Campaign High Score',
                         style: TextStyle(
                           color: Color(0xFFFFD700),
                           fontSize: 18,

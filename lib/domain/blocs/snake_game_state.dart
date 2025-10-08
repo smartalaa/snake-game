@@ -139,6 +139,38 @@ class SnakeGameOver extends SnakeGameState {
   List<Object?> get props => [finalScore, snakeLength, level, isHighScore];
 }
 
+/// State when campaign mode is successfully completed
+class SnakeGameVictory extends SnakeGameState {
+  final int finalScore;
+  final int snakeLength;
+  final int level;
+  final int mazesCleared;
+  final int completionBonus;
+  final bool isHighScore;
+  final GameSettings settings;
+
+  const SnakeGameVictory({
+    required this.finalScore,
+    required this.snakeLength,
+    required this.level,
+    required this.mazesCleared,
+    required this.completionBonus,
+    this.isHighScore = false,
+    required this.settings,
+  });
+
+  @override
+  List<Object?> get props => [
+        finalScore,
+        snakeLength,
+        level,
+        mazesCleared,
+        completionBonus,
+        isHighScore,
+        settings,
+      ];
+}
+
 /// State when an error occurs
 class SnakeGameError extends SnakeGameState {
   final String message;

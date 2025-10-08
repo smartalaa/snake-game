@@ -52,6 +52,22 @@ class GameOverEvent extends SnakeGameEvent {
   const GameOverEvent();
 }
 
+/// Event when campaign mode is successfully completed
+class CampaignCompleteEvent extends SnakeGameEvent {
+  final List<SnakeSegment> finalSnake;
+  final int finalScore;
+  final int mazesCleared;
+
+  const CampaignCompleteEvent({
+    required this.finalSnake,
+    required this.finalScore,
+    required this.mazesCleared,
+  });
+
+  @override
+  List<Object?> get props => [finalSnake, finalScore, mazesCleared];
+}
+
 /// Event to restart the game
 class RestartGameEvent extends SnakeGameEvent {
   const RestartGameEvent();
