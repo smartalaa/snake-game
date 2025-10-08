@@ -52,6 +52,7 @@ That's it! The game will open in your browser in ~10-15 seconds.
 - Eat 20 food items per maze
 - Difficulty increases each level
 - Complete all mazes to win!
+- Enjoy a victory celebration with score breakdown and bonus points
 
 ### 3. Themes
 

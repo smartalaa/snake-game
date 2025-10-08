@@ -15,6 +15,7 @@ A complete Flutter implementation of the classic Snake Xenzia game with modern f
 - **10 Difficulty Levels** - Progressive speed from beginner (500ms) to expert (140ms)
 - **6 Unique Mazes** - No Maze, Box, Tunnel, Mill, Rails, Apartment
 - **Campaign Mode** - Progress through all mazes sequentially
+- **Campaign Victory Celebration** - Dedicated end-of-run summary with bonuses and high score callouts
 - **Classic Mode** - Choose any maze and difficulty
 - **Smart Scoring** - Points multiplied by difficulty level
 
@@ -52,6 +53,7 @@ Beautiful retro-themed menu with theme selection (Backlight, Inversion, Colorful
 - ✅ Swipe and keyboard controls (arrows + WASD)
 - ✅ All 6 mazes working
 - ✅ Pause/resume functionality
+- ✅ Campaign victory dialog with score summary and high-score celebration
 - ✅ Score tracking with difficulty multipliers
 - ✅ Game over dialog with retry option
 
